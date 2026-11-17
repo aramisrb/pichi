@@ -3,7 +3,7 @@ const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:a
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json')));
-const source = fs.readFileSync(path.join(root, 'player.js'), 'utf8');
+const source = fs.readFileSync(path.join(root, 'frame-cache.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'player.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const htmlIds = new Set([...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]));
 class Element {
@@ -21,10 +21,10 @@ async function run(catalog) {
     querySelectorAll:sel=>get(sel==='.anim'?'animations':'backgrounds').children,
     createElement:tag=>{const e=new Element(tag);if(tag==='a')e.click=()=>downloads.push({href:e.href,name:e.download});return e;}};
   class Img {
-    set src(value) { this._src=value;setImmediate(()=>{try{
+    set src(value) { this._src=value;if(!value)return;setImmediate(()=>{try{
       if(failures.has(value))throw Error('injected failure');
-      const png=fs.readFileSync(path.join(root,value));this.naturalWidth=png.readUInt32BE(16);this.naturalHeight=png.readUInt32BE(20);this.onload();
-    }catch(e){this.onerror();}}); }
+      const png=fs.readFileSync(path.join(root,value));this.naturalWidth=png.readUInt32BE(16);this.naturalHeight=png.readUInt32BE(20);this.onload?.();
+    }catch(e){this.onerror?.();}}); }
     get src(){return this._src}
   }
   const context=vm.createContext({document,window:{PEQUI:catalog},Image:Img,matchMedia:()=>({matches:false}),performance:{now:()=>now},requestAnimationFrame:f=>callbacks.push(f),URL,console:{error(){}}});
@@ -38,8 +38,8 @@ async function run(catalog) {
     assert.equal(Number(get('seek').max),a.frames-1);
     assert.equal(get('pet').width,a.width);
     assert.equal(get('duration').textContent,(a.frames/a.fps).toFixed(2)+' s');
-    get('prev').click();assert.equal(Number(get('seek').value),a.frames-1);
-    get('next').click();assert.equal(Number(get('seek').value),0);
+    get('prev').click();await settle();assert.equal(Number(get('seek').value),a.frames-1);
+    get('next').click();await settle();assert.equal(Number(get('seek').value),0);
     get('play').click();tick(1000/a.fps*1.1);assert.equal(Number(get('seek').value),1);
     get('restart').click();assert.equal(Number(get('seek').value),0);
     get('seek').value=a.frames-1;get('seek').oninput();get('loop').checked=false;get('play').click();tick(100);
@@ -47,6 +47,12 @@ async function run(catalog) {
     get('loop').checked=true;get('restart').click();get('speed').value='0.5';get('play').click();tick(2000/a.fps*1.1);
     assert.equal(Number(get('seek').value),1);get('speed').value='1';get('play').click();
     get('download').click();assert.equal(downloads.at(-1).href,`animaciones/${a.id}/frame_0001.png`);
+    // Walk through a full sequence while checking the bounded working set.
+    for(let f=0;f<a.frames;f++) {
+      get('seek').value=f;get('seek').oninput();await settle();
+      assert.equal(Number(get('seek').value),f);
+      assert.ok(context.window.pichiPlaybackState().decodedBytes<=48*1024*1024);
+    }
   }
   // Race: the latest selection owns canvas, metadata and images.
   get('animations').children[0].click();get('animations').children.at(-1).click();await settle();

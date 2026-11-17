@@ -1,3 +1,13 @@
 .venv/
 __pycache__/
 revision
+
+# Copia reversible y extracciones nativas regenerables (se conservan en disco).
+trabajo/version-anterior-20261117/
+trabajo/referencias-video/**/frame_*.png
+trabajo/referencias-video/**/detalle_frame_*.png
+# Las fuentes aceptadas y sus prompts se guardan en poses/fuentes-v2/.
+trabajo/generadas-v2/*.png
+trabajo/generadas-v2/*.jpg
+# Exportaciones de consulta; no son pruebas visuales aprobadas.
+revision-v2/previsualizaciones/*.mp4

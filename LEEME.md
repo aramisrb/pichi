@@ -1,59 +1,64 @@
-# Pequi · Animaciones locales
+# Pichi · Animaciones locales
 
-Abre `index.html` después de extraer el paquete completo. Solo necesita los archivos locales; no utiliza servicios externos para reproducir. Las rutas relativas conservan la estructura de GitHub Pages bajo `/pichi/`. No se ha publicado esta revisión.
+Abre `index.html` con el paquete completo. La versión actual contiene siete secuencias de **512 × 512, 180 PNG RGBA, 30 fps y 6 segundos**. Usa archivos y rutas relativas, sin servicios externos para reproducir. Los cambios están preparados para revisión, sin publicar.
 
-## Contenido y procedencia
+Las poses se han generado de nuevo con ImageGen a partir de las fotografías y fotogramas de los vídeos. No se han ampliado los antiguos sprites de 256 px para presentarlos como detalle nuevo. La generación sigue siendo una interpretación: consulta [el informe y sus limitaciones](revision-v2/INFORME.md) y las [referencias utilizadas](revision-v2/REFERENCIAS.md).
 
-- Siete secuencias de 6 segundos, 180 PNG RGBA de 256 × 256 a 30 fps: 1.260 archivos.
-- `animaciones/<acción>/frame_0000.png` … `frame_0179.png`: resultado reproducido.
-- `poses/refinadas/<acción>/`: poses utilizadas por la reconstrucción actual.
-- `poses/<acción>/`: poses anteriores, conservadas como fuente y comparación.
-- `referencias/` y `fondos/`: las seis fotografías y los cuatro escenarios originales, sin modificar.
-- `manifest.json` y `manifest.js`: catálogo sincronizado, frecuencia, cantidad, dimensiones y procedencia.
-- `revision/generadas/`: hojas producidas con ImageGen y prompts. Las hojas `frontal.png`, `lateral.png` y `dos-patas.png` **no se utilizan**: las carreras nuevas empeoraban las correspondencias de patas y la primera hoja de dos patas tenía un velo. Se usa `dos-patas-limpio.png`.
-- `revision/*-procedencia.json`: tiempo, poses fuente, fracción y distinción entre pose generada e interpolación por fotograma.
-- `revision/metricas-antes.json`, `metricas-despues.json` y hojas de cierre: evidencia reproducible. Consulta `VERIFICACION.md` para el alcance real.
+## Archivos y procedencia
 
-| Acción | Poses fuente | Repeticiones del ciclo de poses en 6 s | PNG distintos |
+- `animaciones/<acción>/frame_0000.png` … `frame_0179.png`: los 1.260 PNG reproducidos.
+- `poses/fuentes-v2/`: 18 láminas generadas activas y sus prompts; 69 poses utilizadas. Se conserva también la lámina de bajada sustituida.
+- `poses/refinadas/<acción>/`: poses recortadas, normalizadas y exportadas a 512 px.
+- `poses/<acción>/`: material anterior conservado.
+- `referencias/`: 42 fotografías y 14 vídeos originales intactos. `fondos/`: cuatro escenarios.
+- `trabajo/referencias-video/`: inventario ffprobe, muestreo inicial, 474 fotogramas nativos seleccionados, marcas de tiempo y hojas de inspección.
+- `trabajo/version-anterior-20261117/`: copia local anterior a esta revisión, incluidos PNG, poses, reproductor y documentación.
+- `manifest.json` y `manifest.js`: catálogo sincronizado, dimensiones, frecuencia, cantidad, referencias de movimiento y mapa de imágenes repetidas.
+- `revision-v2/`: comparaciones, procedencia por PNG, métricas, cierres, informe y visor.
+
+| Acción | Poses nuevas | Ciclos de movimiento en 6 s | Imágenes distintas |
 |---|---:|---:|---:|
-| Frontal | 30 anteriores | 3 | 60 |
-| Lateral | 18 anteriores seleccionadas | 4 | 45 |
-| Dos patas | 24 nuevas | 1 | 180 |
-| Perseguir la cola y rodar | 24 nuevas | 1 | 180 |
-| Curiosidad | 12 nuevas | 1 | 180 |
-| Sacudida | 16 nuevas | 4 | 45 |
-| Lamida | 16 nuevas | 2 | 90 |
+| Carrera frontal | 8 | 12 | 15 |
+| Carrera lateral | 8 | 12 | 15 |
+| Dos patas | 12 | 1 | 180 |
+| Perseguir cola y rodar | 21 | 1 | 180 |
+| Curiosidad | 4 | 2 | 90 |
+| Sacudida | 8 | 15 | 12 |
+| Lamida | 8 | 4 | 45 |
 
-Las repeticiones forman parte del movimiento periódico; **no se presentan como más imágenes independientes ni como mejora de fluidez**. La carrera frontal contiene más de un paso dentro de su ciclo de poses. No son 180 poses generadas por acción ni vídeo capturado del perro.
+Los ciclos cortos se repiten dentro de los seis segundos. Esas repeticiones **no son detalle temporal adicional ni mejora de fluidez por duplicación**. Se mantienen 180 archivos para descarga y compatibilidad; `frameMap` comparte su decodificación. Los archivos `*-procedencia.json` distinguen poses generadas de muestras interpoladas.
 
-## Movimiento y límites
+## Movimiento y transparencia
 
-Las carreras mantienen posición y escala, sin acercamiento acumulativo ni desplazamiento lateral. La lateral utiliza el primer galope completo de las poses originales; se excluye el segundo tramo incompleto, que deriva hacia arriba y recorta la cola. Dos patas contiene subida, equilibrio y bajada. La rodada contiene giro, paso por panza arriba y recuperación frontal. Curiosidad alterna inclinaciones. La sacudida conserva apariencia húmeda. La lamida contiene extensión y retracción sin agrandar la cabeza.
+Las carreras son en el sitio, con escala común y oscilación periódica. Dos patas incluye subida y bajada; la rodada vuelve a cuatro patas y a su orientación inicial; curiosidad inclina y recupera; la lamida extiende y retrae. No se invierten carreras ni rodada. El muestreo `t=i·T/N`, con `i=0…N−1`, excluye el extremo final y considera las poses vecinas a ambos lados del cierre.
 
-El muestreo es `t = i·T/N`, para `i = 0…N−1`. La interpolación incluye última pose → primera pose y sus vecinas circulares. No se añade un fotograma final duplicado ni se invierte la secuencia completa. Se estima flujo óptico DIS, se interpolan desplazamientos cúbicos y se combinan muestras registradas con alfa premultiplicado. Una aproximación estable de la inversión del desplazamiento evita los agujeros de la inversión iterativa en oclusiones. Se limita la región de interpolación al área recorrida por las siluetas más margen.
+La interpolación usa flujo DIS, trayectorias cúbicas circulares y un mapa inverso denso calculado al proyectar coordenadas hacia delante. Rellena huecos de coordenadas antes de muestrear la textura en RGBA premultiplicado. Conserva una silueta principal en oclusiones para reducir dobles patas. Pueden quedar cambios locales al alternar la pose fuente, especialmente en patas y rodada. No equivale a un esqueleto articulado ni a seguimiento del perro real.
 
-**Persisten defectos y falta la aprobación visual en reproducción.** El flujo óptico no conoce articulaciones, oclusiones ni identidad. Quedan variaciones de textura y pueden aparecer deformaciones y contornos secundarios, especialmente en patas, lengua y rodada. No se certifican bucles imperceptibles ni fidelidad anatómica completa. Las diferencias de píxeles y la velocidad del centro de la silueta sirven para detectar problemas, no para aprobar calidad visual.
+Los pequeños huecos cerrados creados dentro del pelo por la proyección se reparan localmente; se registran los píxeles afectados. No se rellenan los espacios abiertos entre patas ni se presenta ese procesamiento como detalle generativo.
 
-Las fotografías tienen prioridad: cara ancha y achatada, hocico oscuro, ojos de tamaño natural, orejas caídas, pelo dorado y crema, cuerpo bajo, patas cortas y cola emplumada. Las nuevas poses son interpretaciones; la densidad del pelo y algunas proporciones aún difieren. Vientre, recuperación de la rodada y pelo mojado son reconstrucciones propuestas, no apariencias exactas verificadas en las fotos. La versión animada no lleva ropa, arnés ni correa. Los PNG siguen siendo de 256 × 256; no se afirma un aumento de detalle por reescalado.
+Se conserva alfa gradual en pelos finos; el interior casi opaco de las láminas generadas se normaliza a opaco. No se aplica enfoque artificial. Las fuentes se reducen con una escala común por acción, sin ampliarlas. El perro no lleva ropa, arnés ni correa.
 
 ## Reproductores
 
-`index.html` conserva selección de animación y fondo, pausa, reinicio, velocidad, avance y retroceso, búsqueda y descarga del PNG transparente. Añade fondos claro y oscuro. Duración, límites, frecuencia y lienzo se obtienen del manifiesto; ya no hay límites fijos de 180/30/256 en la lógica.
+Se conservan animación, fondo, pausa, reinicio, velocidad, paso adelante/atrás, búsqueda, tamaño y descarga del PNG. Lienzo, frecuencia y límites proceden del manifiesto. El lienzo interno conserva los 512 px; la presentación se adapta al espacio disponible.
 
-`revision/reproductor.html` permite observar las siete acciones juntas a 1× o 0,5×, sobre claro, oscuro o salón. Incluye contador de ciclos y modo últimos diez → primeros diez. El regreso del primer bloque de diez al último es un salto deliberado del **visor de inspección**, no parte del ciclo real. La revisión pendiente requiere cinco ciclos completos: 30 segundos a 1× y 60 segundos a 0,5×, sobre cada fondo, observando cara, patas, pelo y ritmo.
+`frame-cache.js` mantiene hasta 48 MiB de imágenes decodificadas referenciadas por el reproductor principal, más hasta cuatro cargas en curso. La caché interna del navegador y la GPU quedan fuera de esa estimación. Si falta una imagen, detiene el reloj lógico hasta cargarla; el rendimiento real aún requiere comprobación en navegador.
 
-## Reconstrucción y comprobaciones
+[El visor de revisión](revision-v2/reproductor.html) muestra las siete acciones o una sola, a 1×/0,5× y sobre blanco, oscuro o salón. Incluye últimos diez → primeros diez. El regreso de ese bloque reducido a su comienzo es un salto del visor de inspección, no de la animación completa. Sus contadores no certifican revisión visual.
 
-Solo para desarrollar; el reproductor no necesita Python ni Node:
+## Repetir el proceso
+
+Solo para desarrollar; reproducir los PNG no requiere Python, Node ni FFmpeg:
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r scripts\requirements.txt
-.venv\Scripts\python scripts\refinar.py
-.venv\Scripts\python scripts\auditar.py
+.venv\Scripts\python scripts\analizar_referencias.py
+.venv\Scripts\python scripts\extraer_fragmentos.py
+.venv\Scripts\python scripts\refinar_v2.py
+.venv\Scripts\python scripts\auditar_v2.py
+.venv\Scripts\python scripts\preparar_evidencia_v2.py --videos
 node scripts\test-player.cjs
 ```
 
-`refinar.py --only curiosidad` reconstruye una acción. Las hojas se separan según la cuadrícula inspeccionada y una escala común por secuencia. Estos scripts procesan las hojas guardadas; no llaman a una API generativa. `auditar.py --tag antes` solo debe ejecutarse sobre los originales para rehacer la comparación histórica.
+Dependencias Python en `scripts/requirements.txt`; FFmpeg y ffprobe deben estar en PATH. `refinar_v2.py --only curiosidad` procesa una acción. Estos scripts reutilizan las láminas guardadas y **no invocan generación de imágenes**. `refinar.py` y `auditar.py` son históricos: ejecutar su flujo principal sobrescribiría la versión actual con el proceso anterior.
 
-Para otra acción, crea PNG consecutivos y actualiza ambos manifiestos con cantidad, frecuencia y dimensiones reales; `duration = frames/fps`. Mantén al menos 30 fps y entre 5 y 15 segundos, transparencia y cierre verificado. Sigue `PROMPT_NUEVA_ANIMACION.md`.
+La copia anterior, extracciones nativas y MP4 de consulta se conservan en disco y se excluyen de Git para evitar duplicar grandes volúmenes. Sus inventarios, tiempos, fuentes aceptadas e informe permanecen disponibles. No se ha hecho commit, push ni publicación.
