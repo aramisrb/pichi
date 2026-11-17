@@ -1,34 +1,59 @@
 # Pequi · Animaciones locales
 
-Extrae **todo el ZIP** en una carpeta y abre `index.html` con Chrome, Edge o Firefox. No requiere instalación, Internet ni servidor. No abras el HTML dentro de la vista previa del ZIP.
+Abre `index.html` después de extraer el paquete completo. Solo necesita los archivos locales; no utiliza servicios externos para reproducir. Las rutas relativas conservan la estructura de GitHub Pages bajo `/pichi/`. No se ha publicado esta revisión.
 
-## Contenido
+## Contenido y procedencia
 
-- Siete animaciones de 6 segundos: 180 PNG RGBA de 256 × 256 por secuencia, reproducidos a 30 fps a velocidad 1×. Total: 1.260 PNG de animación.
-- `animaciones/<nombre>/frame_0000.png` hasta `frame_0179.png`: imágenes independientes, con transparencia.
-- `poses/<nombre>/`: poses clave generadas antes de la interpolación (30 por acción; 36 para el giro y la voltereta).
-- `fondos/`: cuatro escenarios generados a partir de las fotografías: nieve, lago, salón y cocina.
-- `referencias/`: seis fotografías aportadas por el usuario.
-- `manifest.js` y `manifest.json`: catálogo, duración, dimensiones, fotogramas y frecuencia.
-- `PROMPT_NUEVA_ANIMACION.md`: instrucciones reutilizables para otra animación.
+- Siete secuencias de 6 segundos, 180 PNG RGBA de 256 × 256 a 30 fps: 1.260 archivos.
+- `animaciones/<acción>/frame_0000.png` … `frame_0179.png`: resultado reproducido.
+- `poses/refinadas/<acción>/`: poses utilizadas por la reconstrucción actual.
+- `poses/<acción>/`: poses anteriores, conservadas como fuente y comparación.
+- `referencias/` y `fondos/`: las seis fotografías y los cuatro escenarios originales, sin modificar.
+- `manifest.json` y `manifest.js`: catálogo sincronizado, frecuencia, cantidad, dimensiones y procedencia.
+- `revision/generadas/`: hojas producidas con ImageGen y prompts. Las hojas `frontal.png`, `lateral.png` y `dos-patas.png` **no se utilizan**: las carreras nuevas empeoraban las correspondencias de patas y la primera hoja de dos patas tenía un velo. Se usa `dos-patas-limpio.png`.
+- `revision/*-procedencia.json`: tiempo, poses fuente, fracción y distinción entre pose generada e interpolación por fotograma.
+- `revision/metricas-antes.json`, `metricas-despues.json` y hojas de cierre: evidencia reproducible. Consulta `VERIFICACION.md` para el alcance real.
 
-## Reproductor
+| Acción | Poses fuente | Repeticiones del ciclo de poses en 6 s | PNG distintos |
+|---|---:|---:|---:|
+| Frontal | 30 anteriores | 3 | 60 |
+| Lateral | 18 anteriores seleccionadas | 4 | 45 |
+| Dos patas | 24 nuevas | 1 | 180 |
+| Perseguir la cola y rodar | 24 nuevas | 1 | 180 |
+| Curiosidad | 12 nuevas | 1 | 180 |
+| Sacudida | 16 nuevas | 4 | 45 |
+| Lamida | 16 nuevas | 2 | 90 |
 
-Selecciona la acción y espera a que termine su precarga. Puedes pausar, reiniciar, avanzar o retroceder una imagen, desplazarte por la línea de tiempo, cambiar la velocidad y activar o desactivar la repetición. El botón Guardar PNG descarga el fotograma transparente original, sin el fondo. Puedes elegir uno de los cuatro escenarios, un fondo propio, transparencia visual o un color sólido.
+Las repeticiones forman parte del movimiento periódico; **no se presentan como más imágenes independientes ni como mejora de fluidez**. La carrera frontal contiene más de un paso dentro de su ciclo de poses. No son 180 poses generadas por acción ni vídeo capturado del perro.
 
-## Alcance y limitaciones reales
+## Movimiento y límites
 
-Las imágenes son una **recreación generativa aproximada** de este perro. No son fotografías reales nuevas. Se han utilizado las referencias para conservar cara achatada, hocico oscuro, ojos oscuros, tonos dorados y crema, orejas caídas con flecos, patas cortas y cola emplumada. **No se ha conseguido ni se puede certificar una identidad exacta del pelo, cuerpo o expresión en todas las poses.** Las fotografías muestran iluminación, prendas y expresiones diferentes; la versión animada no lleva arnés, ropa ni correa.
+Las carreras mantienen posición y escala, sin acercamiento acumulativo ni desplazamiento lateral. La lateral utiliza el primer galope completo de las poses originales; se excluye el segundo tramo incompleto, que deriva hacia arriba y recorta la cola. Dos patas contiene subida, equilibrio y bajada. La rodada contiene giro, paso por panza arriba y recuperación frontal. Curiosidad alterna inclinaciones. La sacudida conserva apariencia húmeda. La lamida contiene extensión y retracción sin agrandar la cabeza.
 
-Los 30 fps son la frecuencia de reproducción de archivos PNG reales. No son 30 poses generadas independientemente cada segundo: se han interpolado las poses clave mediante estimación de desplazamiento de bloques y mezcla de muestras con alfa premultiplicado. Las carreras repiten tres ciclos de poses dentro de los seis segundos; la sacudida repite dos. El acercamiento y desplazamiento lateral están incorporados en los PNG. Puede haber deformaciones o dobles contornos en transiciones, sobre todo en el giro, la lengua y las patas. El detalle efectivo procede de celdas de aproximadamente 209 × 251 píxeles, o 209 × 209 para la voltereta; los PNG están adaptados a un lienzo 256 × 256. No son fotogramas de alta definición.
+El muestreo es `t = i·T/N`, para `i = 0…N−1`. La interpolación incluye última pose → primera pose y sus vecinas circulares. No se añade un fotograma final duplicado ni se invierte la secuencia completa. Se estima flujo óptico DIS, se interpolan desplazamientos cúbicos y se combinan muestras registradas con alfa premultiplicado. Una aproximación estable de la inversión del desplazamiento evita los agujeros de la inversión iterativa en oclusiones. Se limita la región de interpolación al área recorrida por las siluetas más margen.
 
-La voltereta representa un giro y rodar boca arriba en el suelo. La lamida es un gesto simulado hacia la cámara. La sacudida y la elevación de orejas son aproximaciones visuales; no constituyen una simulación física del pelo o el agua. La continuidad al repetir no es perfecta en todas las acciones.
+**Persisten defectos y falta la aprobación visual en reproducción.** El flujo óptico no conoce articulaciones, oclusiones ni identidad. Quedan variaciones de textura y pueden aparecer deformaciones y contornos secundarios, especialmente en patas, lengua y rodada. No se certifican bucles imperceptibles ni fidelidad anatómica completa. Las diferencias de píxeles y la velocidad del centro de la silueta sirven para detectar problemas, no para aprobar calidad visual.
 
-## Añadir otra secuencia
+Las fotografías tienen prioridad: cara ancha y achatada, hocico oscuro, ojos de tamaño natural, orejas caídas, pelo dorado y crema, cuerpo bajo, patas cortas y cola emplumada. Las nuevas poses son interpretaciones; la densidad del pelo y algunas proporciones aún difieren. Vientre, recuperación de la rodada y pelo mojado son reconstrucciones propuestas, no apariencias exactas verificadas en las fotos. La versión animada no lleva ropa, arnés ni correa. Los PNG siguen siendo de 256 × 256; no se afirma un aumento de detalle por reescalado.
 
-1. Genera y verifica los PNG siguiendo el prompt incluido.
-2. Colócalos en `animaciones/nueva-accion/frame_0000.png`, etc.
-3. Para este reproductor, utiliza 180 PNG de 256 × 256, a 30 fps y 6 segundos.
-4. Añade al array de `manifest.js` una entrada con `id`, `name`, `fps:30`, `frames:180`, `duration:6`, `keyframes`, `width:256`, `height:256`. Actualiza también `manifest.json` como documentación.
+## Reproductores
 
-El reproductor de esta entrega está ajustado a 180 fotogramas. Para duraciones distintas, adapta el límite del selector y la lógica de avance del HTML, además del manifiesto.
+`index.html` conserva selección de animación y fondo, pausa, reinicio, velocidad, avance y retroceso, búsqueda y descarga del PNG transparente. Añade fondos claro y oscuro. Duración, límites, frecuencia y lienzo se obtienen del manifiesto; ya no hay límites fijos de 180/30/256 en la lógica.
+
+`revision/reproductor.html` permite observar las siete acciones juntas a 1× o 0,5×, sobre claro, oscuro o salón. Incluye contador de ciclos y modo últimos diez → primeros diez. El regreso del primer bloque de diez al último es un salto deliberado del **visor de inspección**, no parte del ciclo real. La revisión pendiente requiere cinco ciclos completos: 30 segundos a 1× y 60 segundos a 0,5×, sobre cada fondo, observando cara, patas, pelo y ritmo.
+
+## Reconstrucción y comprobaciones
+
+Solo para desarrollar; el reproductor no necesita Python ni Node:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r scripts\requirements.txt
+.venv\Scripts\python scripts\refinar.py
+.venv\Scripts\python scripts\auditar.py
+node scripts\test-player.cjs
+```
+
+`refinar.py --only curiosidad` reconstruye una acción. Las hojas se separan según la cuadrícula inspeccionada y una escala común por secuencia. Estos scripts procesan las hojas guardadas; no llaman a una API generativa. `auditar.py --tag antes` solo debe ejecutarse sobre los originales para rehacer la comparación histórica.
+
+Para otra acción, crea PNG consecutivos y actualiza ambos manifiestos con cantidad, frecuencia y dimensiones reales; `duration = frames/fps`. Mantén al menos 30 fps y entre 5 y 15 segundos, transparencia y cierre verificado. Sigue `PROMPT_NUEVA_ANIMACION.md`.
